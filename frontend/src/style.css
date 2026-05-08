@@ -1,0 +1,128 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* Backgrounds — deep navy like Alterfx */
+  --bg:       #080D18;
+  --bg2:      #0C1320;
+
+  /* Glass surfaces */
+  --surface:  rgba(255,255,255,0.030);
+  --surface2: rgba(255,255,255,0.055);
+  --surface3: rgba(255,255,255,0.085);
+
+  /* Borders */
+  --border:   rgba(255,255,255,0.07);
+  --border2:  rgba(255,255,255,0.13);
+  --border3:  rgba(255,255,255,0.22);
+
+  /* Accent — teal-cyan (Alterfx signature color) */
+  --accent:       #00D4B0;
+  --accent-light: #00E8C4;
+  --accent-dim:   rgba(0,212,176,0.14);
+  --accent-glow:  rgba(0,212,176,0.38);
+
+  /* Secondary — sky blue */
+  --pink:      #0288C4;
+  --pink-dim:  rgba(2,136,196,0.12);
+  --pink-glow: rgba(2,136,196,0.28);
+
+  /* Semantic */
+  --success:      #10B981;
+  --success-dim:  rgba(16,185,129,0.12);
+  --success-glow: rgba(16,185,129,0.30);
+
+  --warn:      #F59E0B;
+  --warn-dim:  rgba(245,158,11,0.12);
+  --warn-glow: rgba(245,158,11,0.24);
+
+  --danger:      #EF4444;
+  --danger-dim:  rgba(239,68,68,0.12);
+  --danger-glow: rgba(239,68,68,0.24);
+
+  /* Text — slightly cooler blue-white */
+  --text:  #E8EEF8;
+  --text2: #A8B8CC;
+  --muted: #5A6A82;
+
+  /* Fonts */
+  --font-h: 'Syne', sans-serif;
+  --font-b: 'DM Sans', sans-serif;
+
+  /* Gradients — teal → sky blue (Alterfx CTA style) */
+  --grad:  linear-gradient(135deg, #00D4B0 0%, #0288C4 100%);
+  --grad2: linear-gradient(135deg, #00E8C4 0%, #00D4B0 100%);
+
+  /* Layout */
+  --sidebar-w: 240px;
+  --topbar-h:  70px;
+  --radius:    16px;
+  --radius-sm: 10px;
+  --radius-xs: 6px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-b);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Ambient glow — navy with teal/cyan orbs */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 55% at -8% 15%, rgba(0,212,176,0.10) 0%, transparent 60%),
+    radial-gradient(ellipse 55% 50% at 108% 85%, rgba(2,136,196,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 50% 110%, rgba(0,212,176,0.06) 0%, transparent 55%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Dot grid */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(rgba(255,255,255,0.020) 1px, transparent 1px);
+  background-size: 28px 28px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,212,176,0.25); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,212,176,0.45); }
+
+button { font-family: var(--font-b); cursor: pointer; }
+input, select, textarea { font-family: var(--font-b); }
+a { text-decoration: none; color: inherit; }
+
+/* Page transitions */
+.fade-enter-active { animation: fadeUp 0.28s cubic-bezier(0.22, 1, 0.36, 1); }
+.fade-leave-active { transition: opacity 0.15s ease; }
+.fade-leave-to { opacity: 0; }
+
+/* Toast transitions */
+.toast-enter-active { animation: toastIn 0.3s cubic-bezier(0.22, 1, 0.36, 1); }
+.toast-leave-active { transition: all 0.25s ease; }
+.toast-leave-to { opacity: 0; transform: translateY(10px) scale(0.95); }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.94); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.55; transform: scale(0.82); }
+}
