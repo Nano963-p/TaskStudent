@@ -1,5 +1,12 @@
 <template>
-  <div class="layout">
+
+  <!-- ── AUTH PAGES (login / register) ────── -->
+  <template v-if="!auth.isAuthenticated">
+    <RouterView/>
+  </template>
+
+  <!-- ── MAIN APP LAYOUT ───────────────────── -->
+  <div v-else class="layout">
 
     <!-- ── SIDEBAR ─────────────────────────── -->
     <aside class="sidebar">
@@ -48,6 +55,22 @@
       </nav>
 
       <div class="sidebar-footer">
+        <!-- User info -->
+        <div class="user-block">
+          <div class="user-avatar">{{ userInitial }}</div>
+          <div class="user-info">
+            <span class="user-name">{{ auth.user?.username || 'Utilisateur' }}</span>
+            <button class="logout-btn" @click="logout">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="13" height="13">
+                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+              Déconnexion
+            </button>
+          </div>
+        </div>
+
         <div class="progress-block">
           <div class="progress-row">
             <span class="progress-label">Progression globale</span>
@@ -100,12 +123,15 @@
 
 <script setup>
 import { ref, reactive, computed, provide, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useTaskStore } from './store/taskStore'
+import { useAuthStore } from './store/authStore'
 import TaskModal from './components/TaskModal.vue'
 
-const route = useRoute()
-const store = useTaskStore()
+const route  = useRoute()
+const router = useRouter()
+const store  = useTaskStore()
+const auth   = useAuthStore()
 
 const toast = reactive({ visible: false, message: '', type: 'success' })
 let toastTimer = null
@@ -136,9 +162,21 @@ const completionRate = computed(() => {
   return t ? Math.round((store.stats.done / t) * 100) : 0
 })
 
+const userInitial = computed(() => {
+  const name = auth.user?.username || 'U'
+  return name.charAt(0).toUpperCase()
+})
+
+function logout() {
+  auth.logout()
+  router.push('/login')
+}
+
 onMounted(() => {
-  store.fetchTasks()
-  store.fetchStats()
+  if (auth.isAuthenticated) {
+    store.fetchTasks()
+    store.fetchStats()
+  }
 })
 </script>
 
@@ -258,8 +296,54 @@ onMounted(() => {
   padding-top: 16px;
   display: flex;
   flex-direction: column;
+  gap: 12px;
+}
+
+/* User block */
+.user-block {
+  display: flex;
+  align-items: center;
   gap: 10px;
 }
+.user-avatar {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--accent-dim);
+  border: 1px solid rgba(0,212,176,0.28);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-light);
+  flex-shrink: 0;
+}
+.user-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.user-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.logout-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 11px;
+  padding: 0;
+  transition: color 0.15s;
+}
+.logout-btn:hover { color: #FCA5A5; }
+
 .progress-block { display: flex; flex-direction: column; gap: 7px; }
 .progress-row {
   display: flex;

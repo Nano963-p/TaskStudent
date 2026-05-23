@@ -16,6 +16,13 @@ export const useTaskStore = defineStore('tasks', () => {
     const today = new Date().toISOString().split('T')[0]
     return tasks.value.filter(t => t.deadline && t.deadline < today && t.status !== 'terminée')
   })
+  const soonDueTasks = computed(() => {
+    const today = new Date().toISOString().split('T')[0]
+    const in3   = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    return tasks.value.filter(t =>
+      t.deadline && t.deadline >= today && t.deadline <= in3 && t.status !== 'terminée'
+    )
+  })
 
   // Actions
   async function fetchTasks(params = {}) {
@@ -71,7 +78,7 @@ export const useTaskStore = defineStore('tasks', () => {
 
   return {
     tasks, stats, loading, error,
-    urgentTasks, overdueTasks,
+    urgentTasks, overdueTasks, soonDueTasks,
     fetchTasks, fetchStats, createTask, updateTask, patchTask, deleteTask,
   }
 })

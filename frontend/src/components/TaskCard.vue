@@ -23,8 +23,8 @@
         <span class="tag tag-subject">{{ task.subject }}</span>
         <span :class="['tag', `tag-${statusKey}`]">{{ statusLabel }}</span>
         <span v-if="task.priority === 'urgente'" class="tag tag-urgent">URGENT</span>
-        <span v-if="task.deadline" :class="['tag', 'tag-date', { 'tag-overdue': task.is_overdue }]">
-          {{ task.is_overdue ? '⚠ ' : '📅 ' }}{{ formatDate(task.deadline) }}
+        <span v-if="task.deadline" :class="['tag', 'tag-date', { 'tag-overdue': task.is_overdue, 'tag-soon': isSoon }]">
+          {{ task.is_overdue ? '⚠ ' : isSoon ? '⏰ ' : '📅 ' }}{{ formatDate(task.deadline) }}{{ isSoon ? ` · J-${daysLeft}` : '' }}
         </span>
       </div>
     </div>
@@ -84,6 +84,19 @@ const PCOLORS = { urgente: '#EF4444', haute: '#F59E0B', moyenne: '#00D4B0', faib
 const PGLOWS  = { urgente: 'rgba(239,68,68,0.22)', haute: 'rgba(245,158,11,0.18)', moyenne: 'rgba(0,212,176,0.18)', faible: 'transparent' }
 const priorityColor = computed(() => PCOLORS[props.task.priority] || '#8B5CF6')
 const priorityGlow  = computed(() => PGLOWS[props.task.priority]  || 'transparent')
+
+const daysLeft = computed(() => {
+  if (!props.task.deadline) return null
+  const diff = new Date(props.task.deadline + 'T00:00:00') - new Date(new Date().toISOString().split('T')[0] + 'T00:00:00')
+  return Math.round(diff / 86400000)
+})
+const isSoon = computed(() =>
+  !props.task.is_overdue &&
+  props.task.status !== 'terminée' &&
+  daysLeft.value !== null &&
+  daysLeft.value >= 0 &&
+  daysLeft.value <= 3
+)
 
 function formatDate(d) {
   return new Date(d + 'T00:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
@@ -181,6 +194,7 @@ async function doDelete() {
 .tag-urgent   { background: var(--danger-dim);  color: var(--danger); font-size: 9.5px; letter-spacing: 0.7px; }
 .tag-date     { background: var(--surface3);    color: var(--text2); }
 .tag-overdue  { background: var(--danger-dim);  color: #FCA5A5; }
+.tag-soon     { background: var(--warn-dim);    color: var(--warn); border: 1px solid rgba(245,158,11,0.25); }
 
 /* Actions */
 .card-actions {

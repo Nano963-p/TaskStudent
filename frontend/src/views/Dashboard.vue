@@ -41,6 +41,22 @@
       </div>
     </div>
 
+    <!-- ── SOON ALERT (≤ 3 jours) ──────────── -->
+    <Transition name="alert">
+      <div v-if="store.soonDueTasks.length" class="alert-bar alert-bar--warn">
+        <span class="alert-pip alert-pip--warn"></span>
+        <span class="alert-body">
+          <strong>{{ store.soonDueTasks.length }} tâche(s) à rendre dans moins de 3 jours</strong>
+          <span class="alert-names alert-names--warn">
+            <span v-for="(t, i) in store.soonDueTasks.slice(0, 3)" :key="t.id">
+              {{ t.title }}<template v-if="i < Math.min(store.soonDueTasks.length, 3) - 1">, </template>
+            </span>
+            <span v-if="store.soonDueTasks.length > 3"> +{{ store.soonDueTasks.length - 3 }}</span>
+          </span>
+        </span>
+      </div>
+    </Transition>
+
     <!-- ── OVERDUE ALERT ──────────────────── -->
     <Transition name="alert">
       <div v-if="store.overdueTasks.length" class="alert-bar">
@@ -49,7 +65,7 @@
           <strong>{{ store.overdueTasks.length }} tâche(s) en retard</strong>
           <span class="alert-names">
             <span v-for="(t, i) in store.overdueTasks.slice(0, 3)" :key="t.id">
-              {{ t.title }}<span v-if="i < Math.min(store.overdueTasks.length, 3) - 1">, </span>
+              {{ t.title }}<template v-if="i < Math.min(store.overdueTasks.length, 3) - 1">, </template>
             </span>
             <span v-if="store.overdueTasks.length > 3"> +{{ store.overdueTasks.length - 3 }}</span>
           </span>
@@ -197,9 +213,15 @@ async function onStatusChanged() {
   border: 1px solid rgba(239,68,68,0.18);
   border-radius: var(--radius-sm);
   padding: 13px 16px;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
   font-size: 12.5px;
   color: #FCA5A5;
+}
+.alert-bar--warn {
+  background: rgba(245,158,11,0.07);
+  border-color: rgba(245,158,11,0.20);
+  color: var(--warn);
+  margin-bottom: 10px;
 }
 .alert-pip {
   width: 7px; height: 7px;
@@ -210,8 +232,15 @@ async function onStatusChanged() {
   margin-top: 4px;
   animation: pulse-dot 1.6s ease-in-out infinite;
 }
+.alert-pip--warn {
+  background: var(--warn);
+  box-shadow: 0 0 8px var(--warn-glow);
+}
 .alert-body { display: flex; flex-direction: column; gap: 3px; }
 .alert-names { color: rgba(252,165,165,0.75); font-size: 12px; }
+.alert-names--warn { color: rgba(245,158,11,0.75); }
+
+.alert-bar:last-of-type { margin-bottom: 20px; }
 
 .alert-enter-active, .alert-leave-active { transition: all 0.25s ease; }
 .alert-enter-from, .alert-leave-to { opacity: 0; transform: translateY(-6px); }
