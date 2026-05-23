@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(\"C:\\\\Users\\\\RPC\\\\Desktop\\\\TaskStudent\\\\env\\\\Scripts\\\\pip.exe\" install *)",
-      "Bash(\"C:\\\\Users\\\\RPC\\\\Desktop\\\\TaskStudent\\\\env\\\\Scripts\\\\python.exe\" manage.py check)"
-    ]
-  }
-}
