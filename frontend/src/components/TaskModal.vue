@@ -53,7 +53,10 @@
           </div>
           <div class="field">
             <label class="field-lbl">Date limite</label>
-            <input class="field-inp" type="date" v-model="form.deadline"/>
+            <input class="field-inp" type="date" v-model="form.deadline" :min="today"/>
+            <span v-if="form.deadline && form.deadline < today" class="field-warn">
+              ⚠ Date dans le passé — les badges Rapide/Survivant ne se déclencheront pas.
+            </span>
           </div>
         </div>
 
@@ -116,6 +119,8 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { useTaskStore } from '../store/taskStore'
+
+const today = new Date().toISOString().split('T')[0]
 
 const props = defineProps({ task: Object })
 const emit  = defineEmits(['close', 'saved'])
@@ -276,7 +281,8 @@ async function save() {
 .field-inp::placeholder { color: var(--muted); }
 .field-inp option { background: #0C0C1A; color: var(--text); }
 .field-ta { resize: vertical; min-height: 84px; line-height: 1.55; }
-.field-err { font-size: 11px; color: var(--danger); }
+.field-err  { font-size: 11px; color: var(--danger); }
+.field-warn { font-size: 11px; color: var(--warn); }
 
 /* Priority grid */
 .prio-grid { display: flex; gap: 6px; flex-wrap: wrap; }

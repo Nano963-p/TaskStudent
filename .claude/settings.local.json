@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\RPC\\\\Desktop\\\\TaskStudent\" -Recurse -Force)",
+      "Bash(Select-Object FullName)",
+      "Bash(Sort-Object FullName)",
+      "Bash(Format-Table -AutoSize)",
+      "PowerShell(head *)",
+      "Bash(python manage.py makemigrations)",
+      "Bash(where python *)",
+      "Bash(py --version)",
+      "Bash(py -3.14 -c \"import django; print\\(django.__version__\\)\")",
+      "Bash(py -3.14 -m django --version)",
+      "Bash(py -3.14 -m pip list)",
+      "Bash(dir C:\\\\Users\\\\RPC\\\\Desktop\\\\TaskStudent *)",
+      "Bash(\"C:/Users/RPC/Desktop/TaskStudent/env/Scripts/python.exe\" manage.py makemigrations)",
+      "Bash(\"C:/Users/RPC/Desktop/TaskStudent/env/Scripts/python.exe\" manage.py makemigrations accounts)",
+      "Bash(\"C:/Users/RPC/Desktop/TaskStudent/env/Scripts/python.exe\" manage.py migrate)",
+      "Bash(node *)",
+      "Bash(py *)",
+      "Bash(\"C:/Users/RPC/Desktop/TaskStudent/env/Scripts/python.exe\" manage.py check)",
+      "Bash(C:/Users/RPC/Desktop/TaskStudent/env/Scripts/python.exe -c ' *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\RPC\\\\Desktop\\\\TaskStudent\" -Recurse -Force -ErrorAction SilentlyContinue)",
+      "Bash(Select-Object FullName, PSIsContainer)",
+      "Bash(ConvertTo-Json -Depth 100)"
+    ]
+  }
+}

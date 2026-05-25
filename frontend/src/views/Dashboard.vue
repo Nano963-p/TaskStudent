@@ -143,7 +143,6 @@ async function onDeleted() {
 }
 async function onStatusChanged() {
   await store.fetchStats()
-  showToast('Statut mis à jour', 'success')
 }
 </script>
 

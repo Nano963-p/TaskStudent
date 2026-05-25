@@ -10,10 +10,10 @@ class TaskSerializer(serializers.ModelSerializer):
         model = Task
         fields = [
             'id', 'title', 'subject', 'description',
-            'deadline', 'priority', 'status',
+            'deadline', 'priority', 'status', 'completed_at', 'xp_awarded',
             'created_at', 'updated_at', 'is_overdue'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at', 'is_overdue']
+        read_only_fields = ['id', 'completed_at', 'xp_awarded', 'created_at', 'updated_at', 'is_overdue']
 
     def get_is_overdue(self, obj):
         """Retourne True si la tâche est en retard (deadline dépassée et pas terminée)."""

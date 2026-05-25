@@ -1,9 +1,11 @@
-from rest_framework import viewsets, filters, status
+from datetime import date
+from rest_framework import viewsets, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Task
 from .serializers import TaskSerializer
+from .gamification import award_task_completion, revoke_task_completion
 
 
 class TaskViewSet(viewsets.ModelViewSet):
@@ -26,6 +28,48 @@ class TaskViewSet(viewsets.ModelViewSet):
     search_fields = ['title', 'description', 'subject']
     ordering_fields = ['created_at', 'deadline', 'priority']
     ordering = ['-created_at']
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        old_status = instance.status
+        new_status = request.data.get('status', old_status)
+
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+
+        gamification_data = {'xp_earned': 0, 'xp_subtracted': 0, 'new_badges': []}
+
+        if old_status != 'terminée' and new_status == 'terminée':
+            # ── Complétion ──────────────────────────────────────────────────
+            # Si la tâche avait déjà des XP (re-complétion après annulation),
+            # on les retire d'abord pour repartir proprement
+            if instance.xp_awarded > 0:
+                revoke_task_completion(instance, request.user)
+
+            serializer.save(completed_at=date.today(), xp_awarded=0)
+
+            result = award_task_completion(serializer.instance, request.user)
+
+            serializer.instance.xp_awarded = result['xp_earned']
+            serializer.instance.save(update_fields=['xp_awarded'])
+
+            gamification_data['xp_earned'] = result['xp_earned']
+            gamification_data['new_badges'] = result['new_badges']
+
+        elif old_status == 'terminée' and new_status != 'terminée':
+            # ── Annulation de complétion ─────────────────────────────────────
+            result = revoke_task_completion(instance, request.user)
+            serializer.save(completed_at=None, xp_awarded=0)
+            gamification_data['xp_subtracted'] = result['xp_subtracted']
+
+        else:
+            # ── Changement de statut neutre (ex: à faire → en cours) ─────────
+            serializer.save()
+
+        response_data = dict(serializer.data)
+        response_data.update(gamification_data)
+        return Response(response_data)
 
     @action(detail=False, methods=['get'], url_path='stats')
     def stats(self, request):

@@ -48,6 +48,8 @@ class Task(models.Model):
         default='à faire',
         verbose_name='Statut'
     )
+    completed_at = models.DateField(null=True, blank=True, verbose_name='Terminée le')
+    xp_awarded = models.IntegerField(default=0, verbose_name='XP accordés')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Créée le')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Modifiée le')
 

@@ -32,6 +32,13 @@
     <!-- Hover actions -->
     <Transition name="slide-in">
       <div v-if="hover && !showConfirm" class="card-actions">
+        <button class="act-btn act-focus" @click="onFocus" title="Mode Focus (Pomodoro)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+               stroke-linecap="round" width="11" height="11">
+            <circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/>
+          </svg>
+          Focus
+        </button>
         <button class="act-btn act-edit" @click="emit('edit', task)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                stroke-linecap="round" width="11" height="11">
@@ -62,12 +69,15 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, inject } from 'vue'
 import { useTaskStore } from '../store/taskStore'
+import { useGamificationStore } from '../store/gamificationStore'
 
 const props = defineProps({ task: Object })
 const emit  = defineEmits(['edit', 'deleted', 'statusChanged'])
-const store = useTaskStore()
+const store  = useTaskStore()
+const gamification = useGamificationStore()
+const showToast = inject('showToast')
 
 const hover       = ref(false)
 const showConfirm = ref(false)
@@ -103,9 +113,37 @@ function formatDate(d) {
 }
 
 async function cycleStatus() {
-  await store.patchTask(props.task.id, { status: CYCLE[props.task.status] })
+  const nextStatus = CYCLE[props.task.status]
+  const res = await store.patchTask(props.task.id, { status: nextStatus })
+
+  if (res.xp_earned > 0) {
+    showToast(`+${res.xp_earned} XP ✦ Tâche terminée !`, 'success')
+  } else if (res.xp_subtracted > 0) {
+    showToast(`-${res.xp_subtracted} XP · Tâche remise en attente`, 'danger')
+  } else {
+    showToast('Statut mis à jour', 'success')
+  }
+
+  // Toujours rafraîchir le profil si XP ou badges ont changé
+  if (res.xp_earned > 0 || res.xp_subtracted > 0) {
+    gamification.fetchProfile()
+  }
+
+  if (res.new_badges?.length) {
+    for (const badge of res.new_badges) {
+      setTimeout(() => {
+        showToast(`${badge.icon} Badge « ${badge.name} » débloqué !`, 'badge')
+      }, 800)
+    }
+  }
+
   emit('statusChanged')
 }
+
+function onFocus() {
+  gamification.startFocus(props.task)
+}
+
 async function doDelete() {
   await store.deleteTask(props.task.id)
   emit('deleted')
@@ -210,12 +248,18 @@ async function doDelete() {
   border: 1px solid transparent;
   cursor: pointer; transition: all 0.15s;
 }
+.act-focus {
+  background: rgba(139,92,246,0.15);
+  color: #a78bfa;
+  border-color: rgba(139,92,246,0.2);
+}
+.act-focus:hover { background: rgba(139,92,246,0.28); }
 .act-edit {
   background: var(--accent-dim);
   color: var(--accent-light);
   border-color: rgba(0,212,176,0.2);
 }
-.act-edit:hover { background: rgba(139,92,246,0.22); }
+.act-edit:hover { background: rgba(0,212,176,0.22); }
 .act-delete {
   background: var(--danger-dim);
   color: var(--danger);
