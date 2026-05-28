@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Dashboard from '../views/Dashboard.vue'
 import TaskList  from '../views/TaskList.vue'
-import Badges    from '../views/Badges.vue'
 import Login     from '../views/Login.vue'
 import Register  from '../views/Register.vue'
 
@@ -11,7 +10,6 @@ const router = createRouter({
     { path: '/',          redirect: '/dashboard' },
     { path: '/dashboard', component: Dashboard, meta: { requiresAuth: true } },
     { path: '/tasks',     component: TaskList,  meta: { requiresAuth: true } },
-    { path: '/badges',    component: Badges,    meta: { requiresAuth: true } },
     { path: '/login',     component: Login,     meta: { guest: true } },
     { path: '/register',  component: Register,  meta: { guest: true } },
   ],

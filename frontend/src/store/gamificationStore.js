@@ -10,7 +10,6 @@ export const useGamificationStore = defineStore('gamification', () => {
     xp_current_level: 0,
     xp_next_level: 200,
     xp_progress_pct: 0,
-    badges: [],
   })
 
   const focusedTask = ref(null)
@@ -20,7 +19,7 @@ export const useGamificationStore = defineStore('gamification', () => {
       const res = await api.get('/auth/profile/')
       profile.value = res.data
     } catch (e) {
-      console.error('Erreur profil gamification:', e)
+      console.error('Erreur profil:', e)
     }
   }
 

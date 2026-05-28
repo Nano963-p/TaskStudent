@@ -113,8 +113,8 @@ function formatDate(d) {
 }
 
 async function cycleStatus() {
-  const nextStatus = CYCLE[props.task.status]
-  const res = await store.patchTask(props.task.id, { status: nextStatus })
+  const prochainStatut = CYCLE[props.task.status]
+  const res = await store.patchTask(props.task.id, { status: prochainStatut })
 
   if (res.xp_earned > 0) {
     showToast(`+${res.xp_earned} XP ✦ Tâche terminée !`, 'success')
@@ -124,17 +124,8 @@ async function cycleStatus() {
     showToast('Statut mis à jour', 'success')
   }
 
-  // Toujours rafraîchir le profil si XP ou badges ont changé
   if (res.xp_earned > 0 || res.xp_subtracted > 0) {
     gamification.fetchProfile()
-  }
-
-  if (res.new_badges?.length) {
-    for (const badge of res.new_badges) {
-      setTimeout(() => {
-        showToast(`${badge.icon} Badge « ${badge.name} » débloqué !`, 'badge')
-      }, 800)
-    }
   }
 
   emit('statusChanged')

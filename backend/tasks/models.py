@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 
 class Task(models.Model):
@@ -28,35 +29,20 @@ class Task(models.Model):
         ('Gestion', 'Gestion'),
     ]
 
-    title = models.CharField(max_length=200, verbose_name='Titre')
-    subject = models.CharField(
-        max_length=100,
-        choices=SUBJECT_CHOICES,
-        verbose_name='Matière'
-    )
-    description = models.TextField(blank=True, verbose_name='Description')
-    deadline = models.DateField(null=True, blank=True, verbose_name='Date limite')
-    priority = models.CharField(
-        max_length=20,
-        choices=PRIORITY_CHOICES,
-        default='moyenne',
-        verbose_name='Priorité'
-    )
-    status = models.CharField(
-        max_length=20,
-        choices=STATUS_CHOICES,
-        default='à faire',
-        verbose_name='Statut'
-    )
-    completed_at = models.DateField(null=True, blank=True, verbose_name='Terminée le')
-    xp_awarded = models.IntegerField(default=0, verbose_name='XP accordés')
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Créée le')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Modifiée le')
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    title = models.CharField(max_length=200)
+    subject = models.CharField(max_length=100, choices=SUBJECT_CHOICES)
+    description = models.TextField(blank=True)
+    deadline = models.DateField(null=True, blank=True)
+    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='moyenne')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='à faire')
+    completed_at = models.DateField(null=True, blank=True)
+    xp_awarded = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ['-created_at']
-        verbose_name = 'Tâche'
-        verbose_name_plural = 'Tâches'
 
     def __str__(self):
         return f"[{self.priority.upper()}] {self.title} — {self.subject}"

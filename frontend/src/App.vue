@@ -1,14 +1,14 @@
 <template>
 
-  <!-- ── AUTH PAGES (login / register) ────── -->
+  <!-- Pages login / register -->
   <template v-if="!auth.isAuthenticated">
     <RouterView/>
   </template>
 
-  <!-- ── MAIN APP LAYOUT ───────────────────── -->
+  <!-- Application principale -->
   <div v-else class="layout">
 
-    <!-- ── SIDEBAR ─────────────────────────── -->
+    <!-- Barre latérale -->
     <aside class="sidebar">
 
       <div class="brand">
@@ -52,21 +52,10 @@
           <span class="nav-label">Toutes les tâches</span>
           <span v-if="store.stats.total" class="nav-count">{{ store.stats.total }}</span>
         </RouterLink>
-
-        <RouterLink to="/badges" class="nav-item" active-class="nav-item--active">
-          <span class="nav-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="8" r="6"/>
-              <path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/>
-            </svg>
-          </span>
-          <span class="nav-label">Badges & XP</span>
-          <span v-if="earnedBadgeCount" class="nav-count nav-count--gold">{{ earnedBadgeCount }}</span>
-        </RouterLink>
       </nav>
 
       <div class="sidebar-footer">
-        <!-- XP block -->
+        <!-- XP -->
         <div class="xp-block">
           <div class="xp-block-row">
             <div class="xp-level-pill">Niv. {{ gamification.profile.level }}</div>
@@ -77,7 +66,7 @@
           </div>
         </div>
 
-        <!-- User info -->
+        <!-- Utilisateur -->
         <div class="user-block">
           <div class="user-avatar">{{ userInitial }}</div>
           <div class="user-info">
@@ -96,24 +85,24 @@
         <div class="progress-block">
           <div class="progress-row">
             <span class="progress-label">Progression globale</span>
-            <span class="progress-pct">{{ completionRate }}%</span>
+            <span class="progress-pct">{{ tauxCompletion }}%</span>
           </div>
           <div class="progress-track">
-            <div class="progress-fill" :style="{ width: completionRate + '%' }"></div>
+            <div class="progress-fill" :style="{ width: tauxCompletion + '%' }"></div>
           </div>
         </div>
-        <span class="version">v1.1 · TaskStudent</span>
+        <span class="version">v1.2 · TaskStudent</span>
       </div>
     </aside>
 
-    <!-- ── MAIN ───────────────────────────── -->
+    <!-- Contenu principal -->
     <div class="main">
       <header class="topbar">
         <div class="topbar-info">
-          <h1 class="topbar-title">{{ pageTitle }}</h1>
-          <p class="topbar-sub">{{ pageSub }}</p>
+          <h1 class="topbar-title">{{ titrePage }}</h1>
+          <p class="topbar-sub">{{ sousTitrePage }}</p>
         </div>
-        <button class="btn-new" @click="openModal(null)">
+        <button class="btn-new" @click="ouvrirModal(null)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8"
                stroke-linecap="round" width="13" height="13">
             <line x1="12" y1="5" x2="12" y2="19"/>
@@ -125,23 +114,23 @@
 
       <main class="content">
         <Transition name="fade" mode="out-in">
-          <RouterView :key="route.path" @edit="openModal"/>
+          <RouterView :key="route.path" @edit="ouvrirModal"/>
         </Transition>
       </main>
     </div>
 
-    <!-- ── TOAST ──────────────────────────── -->
+    <!-- Toast (notification) -->
     <Transition name="toast">
       <div v-if="toast.visible" :class="['toast', `toast--${toast.type}`]">
-        <span class="toast-icon">{{ toastIcon }}</span>
+        <span class="toast-icon">{{ iconeToast }}</span>
         {{ toast.message }}
       </div>
     </Transition>
 
-    <!-- ── MODAL ──────────────────────────── -->
-    <TaskModal v-if="modal.open" :task="modal.task" @close="modal.open = false" @saved="onSaved"/>
+    <!-- Modal de création/édition de tâche -->
+    <TaskModal v-if="modal.ouvert" :task="modal.tache" @close="modal.ouvert = false" @saved="onSaved"/>
 
-    <!-- ── POMODORO TIMER ──────────────────── -->
+    <!-- Timer Pomodoro -->
     <PomodoroTimer
       v-if="gamification.focusedTask"
       :task="gamification.focusedTask"
@@ -165,57 +154,59 @@ const store  = useTaskStore()
 const auth   = useAuthStore()
 const gamification = useGamificationStore()
 
+// Toast (notification temporaire)
 const toast = reactive({ visible: false, message: '', type: 'success' })
-let toastTimer = null
+let timerToast = null
 
-function showToast(message, type = 'success') {
-  clearTimeout(toastTimer)
+function afficherToast(message, type = 'success') {
+  clearTimeout(timerToast)
   Object.assign(toast, { message, type, visible: true })
-  toastTimer = setTimeout(() => { toast.visible = false }, 3200)
+  timerToast = setTimeout(() => { toast.visible = false }, 3200)
 }
-provide('showToast', showToast)
+provide('showToast', afficherToast)
 
-const toastIcon = computed(() => {
+const iconeToast = computed(() => {
   if (toast.type === 'success') return '✓'
   if (toast.type === 'badge')   return '🏅'
   return '✕'
 })
 
-const modal = reactive({ open: false, task: null })
-function openModal(task = null) { modal.task = task || null; modal.open = true }
+// Modal
+const modal = reactive({ ouvert: false, tache: null })
 
-async function onSaved(wasEdit) {
-  modal.open = false
-  await Promise.all([store.fetchTasks(), store.fetchStats()])
-  showToast(wasEdit ? 'Tâche mise à jour ✦' : 'Tâche créée ✦', 'success')
+function ouvrirModal(tache = null) {
+  modal.tache = tache || null
+  modal.ouvert = true
 }
 
-const pageTitle = computed(() => {
-  if (route.path.startsWith('/badges')) return 'Badges & XP'
-  if (route.path.startsWith('/tasks'))  return 'Toutes les tâches'
+async function onSaved(estEdition) {
+  modal.ouvert = false
+  await Promise.all([store.fetchTasks(), store.fetchStats()])
+  afficherToast(estEdition ? 'Tâche mise à jour ✦' : 'Tâche créée ✦', 'success')
+}
+
+// Titre de la page selon la route
+const titrePage = computed(() => {
+  if (route.path.startsWith('/tasks')) return 'Toutes les tâches'
   return 'Tableau de bord'
 })
-const pageSub = computed(() => {
-  if (route.path.startsWith('/badges'))
-    return `${gamification.profile.total_xp} XP · Niveau ${gamification.profile.level}`
+
+const sousTitrePage = computed(() => {
   if (route.path.startsWith('/tasks'))
     return `${store.stats.total} tâche(s) enregistrée(s)`
   return `${store.stats.urgent} urgente(s)  ·  ${store.stats.todo} à faire`
 })
 
-const completionRate = computed(() => {
-  const t = store.stats.total
-  return t ? Math.round((store.stats.done / t) * 100) : 0
+const tauxCompletion = computed(() => {
+  const total = store.stats.total
+  if (total === 0) return 0
+  return Math.round((store.stats.done / total) * 100)
 })
 
 const userInitial = computed(() => {
-  const name = auth.user?.username || 'U'
-  return name.charAt(0).toUpperCase()
+  const nom = auth.user?.username || 'U'
+  return nom.charAt(0).toUpperCase()
 })
-
-const earnedBadgeCount = computed(() =>
-  gamification.profile.badges.filter(b => b.earned).length
-)
 
 function logout() {
   auth.logout()
@@ -239,7 +230,7 @@ onMounted(() => {
   z-index: 1;
 }
 
-/* ── SIDEBAR ─────────────────────────────────── */
+/* Barre latérale */
 .sidebar {
   width: var(--sidebar-w);
   flex-shrink: 0;
@@ -256,7 +247,6 @@ onMounted(() => {
   -webkit-backdrop-filter: blur(28px);
 }
 
-/* Brand */
 .brand {
   display: flex;
   align-items: center;
@@ -288,7 +278,6 @@ onMounted(() => {
   background-clip: text;
 }
 
-/* Section label */
 .nav-section-label {
   font-size: 9.5px;
   font-weight: 700;
@@ -299,7 +288,6 @@ onMounted(() => {
   margin-bottom: 6px;
 }
 
-/* Nav */
 .nav {
   display: flex;
   flex-direction: column;
@@ -338,14 +326,9 @@ onMounted(() => {
   font-weight: 700;
   padding: 2px 7px;
   border-radius: 20px;
-  letter-spacing: 0.2px;
-}
-.nav-count--gold {
-  background: rgba(245,158,11,0.18);
-  color: #F59E0B;
 }
 
-/* Footer */
+/* Pied de la sidebar */
 .sidebar-footer {
   border-top: 1px solid var(--border);
   padding-top: 16px;
@@ -354,7 +337,6 @@ onMounted(() => {
   gap: 12px;
 }
 
-/* XP block */
 .xp-block {
   background: rgba(0,212,176,0.05);
   border: 1px solid rgba(0,212,176,0.14);
@@ -388,11 +370,9 @@ onMounted(() => {
   height: 100%;
   background: linear-gradient(90deg, #00D4B0, #0288C4);
   border-radius: 4px;
-  transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1);
-  box-shadow: 0 0 6px rgba(0,212,176,0.4);
+  transition: width 0.7s ease;
 }
 
-/* User block */
 .user-block {
   display: flex;
   align-items: center;
@@ -455,12 +435,11 @@ onMounted(() => {
   height: 100%;
   background: var(--grad);
   border-radius: 4px;
-  transition: width 0.7s cubic-bezier(0.22, 1, 0.36, 1);
-  box-shadow: 0 0 8px var(--accent-glow);
+  transition: width 0.7s ease;
 }
 .version { font-size: 10px; color: var(--muted); text-align: center; }
 
-/* ── MAIN ────────────────────────────────────── */
+/* Zone principale */
 .main {
   flex: 1;
   margin-left: var(--sidebar-w);
@@ -469,7 +448,6 @@ onMounted(() => {
   min-height: 100vh;
 }
 
-/* Topbar */
 .topbar {
   position: sticky;
   top: 0; z-index: 100;
@@ -496,7 +474,6 @@ onMounted(() => {
   margin-top: 2px;
 }
 
-/* New task button */
 .btn-new {
   display: flex;
   align-items: center;
@@ -508,24 +485,21 @@ onMounted(() => {
   border-radius: var(--radius-sm);
   font-size: 13px;
   font-weight: 600;
-  letter-spacing: -0.1px;
   transition: all 0.22s;
   box-shadow: 0 2px 12px var(--accent-glow);
 }
 .btn-new:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 28px var(--accent-glow), 0 2px 8px var(--pink-glow);
+  box-shadow: 0 8px 28px var(--accent-glow);
 }
-.btn-new:active { transform: translateY(0); }
 
-/* Page content */
 .content {
   flex: 1;
   padding: 28px 32px;
   max-width: 900px;
 }
 
-/* ── TOAST ───────────────────────────────────── */
+/* Toast */
 .toast {
   position: fixed;
   bottom: 28px; right: 28px;
@@ -544,19 +518,11 @@ onMounted(() => {
   background: rgba(16,185,129,0.11);
   border: 1px solid rgba(16,185,129,0.24);
   color: #6EE7B7;
-  box-shadow: 0 4px 24px rgba(16,185,129,0.14);
 }
 .toast--danger {
   background: rgba(239,68,68,0.11);
   border: 1px solid rgba(239,68,68,0.24);
   color: #FCA5A5;
-  box-shadow: 0 4px 24px rgba(239,68,68,0.14);
-}
-.toast--badge {
-  background: rgba(245,158,11,0.13);
-  border: 1px solid rgba(245,158,11,0.28);
-  color: #FCD34D;
-  box-shadow: 0 4px 24px rgba(245,158,11,0.18);
 }
 .toast-icon {
   width: 18px; height: 18px;
@@ -567,13 +533,11 @@ onMounted(() => {
 }
 .toast--success .toast-icon { background: rgba(16,185,129,0.22); color: var(--success); }
 .toast--danger  .toast-icon { background: rgba(239,68,68,0.22);  color: var(--danger); }
-.toast--badge   .toast-icon { background: rgba(245,158,11,0.22); font-size: 12px; }
 
-/* Fade transition */
+/* Transitions */
 .fade-enter-active, .fade-leave-active { transition: opacity 0.18s, transform 0.18s; }
 .fade-enter-from, .fade-leave-to { opacity: 0; transform: translateY(6px); }
 
-/* Toast transition */
 .toast-enter-active, .toast-leave-active { transition: opacity 0.22s, transform 0.22s; }
-.toast-enter-from, .toast-leave-to { opacity: 0; transform: translateY(12px) scale(0.96); }
+.toast-enter-from, .toast-leave-to { opacity: 0; transform: translateY(12px); }
 </style>

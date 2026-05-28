@@ -1,72 +1,37 @@
 from django.db import models
 from django.contrib.auth.models import User
 
-
-BADGE_DEFINITIONS = {
-    'organise': {
-        'name': 'Organisé',
-        'description': '5 tâches terminées',
-        'icon': '📋',
-        'color': '#00D4B0',
-    },
-    'rapide': {
-        'name': 'Rapide',
-        'description': 'Tâche terminée avant la deadline',
-        'icon': '⚡',
-        'color': '#F59E0B',
-    },
-    'survivant': {
-        'name': 'Survivant',
-        'description': 'Tâche terminée le dernier jour',
-        'icon': '🔥',
-        'color': '#EF4444',
-    },
-}
-
-LEVEL_THRESHOLDS = [0, 200, 500, 1000, 2000, 3500, 5000]
+# XP nécessaires pour passer au niveau suivant
+NIVEAUX = [0, 200, 500, 1000, 2000, 3500, 5000]
 
 
 class UserProfile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
     total_xp = models.IntegerField(default=0)
     tasks_completed = models.IntegerField(default=0)
 
-    @property
-    def level(self):
-        for i in range(len(LEVEL_THRESHOLDS) - 1, -1, -1):
-            if self.total_xp >= LEVEL_THRESHOLDS[i]:
-                return i + 1
-        return 1
+    def get_niveau(self):
+        niveau = 1
+        for i, xp_requis in enumerate(NIVEAUX):
+            if self.total_xp >= xp_requis:
+                niveau = i + 1
+        return niveau
 
-    @property
-    def xp_current_level(self):
-        lvl = self.level
-        return LEVEL_THRESHOLDS[lvl - 1] if lvl - 1 < len(LEVEL_THRESHOLDS) else 0
+    def get_xp_niveau_actuel(self):
+        n = self.get_niveau()
+        if n - 1 < len(NIVEAUX):
+            return NIVEAUX[n - 1]
+        return 0
 
-    @property
-    def xp_next_level(self):
-        lvl = self.level
-        if lvl < len(LEVEL_THRESHOLDS):
-            return LEVEL_THRESHOLDS[lvl]
+    def get_xp_prochain_niveau(self):
+        n = self.get_niveau()
+        if n < len(NIVEAUX):
+            return NIVEAUX[n]
         return self.total_xp + 1000
 
-    @property
-    def xp_progress_pct(self):
-        current = self.xp_current_level
-        next_lvl = self.xp_next_level
-        if next_lvl <= current:
+    def get_progression_pct(self):
+        actuel = self.get_xp_niveau_actuel()
+        prochain = self.get_xp_prochain_niveau()
+        if prochain <= actuel:
             return 100
-        return round((self.total_xp - current) / (next_lvl - current) * 100)
-
-    class Meta:
-        verbose_name = 'Profil utilisateur'
-
-
-class UserBadge(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='badges')
-    badge_key = models.CharField(max_length=50)
-    earned_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        unique_together = ('user', 'badge_key')
-        verbose_name = 'Badge utilisateur'
+        return round((self.total_xp - actuel) / (prochain - actuel) * 100)

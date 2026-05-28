@@ -5,23 +5,30 @@ from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Task
 from .serializers import TaskSerializer
-from .gamification import award_task_completion, revoke_task_completion
+from accounts.models import UserProfile
+
+# XP gagnés selon la priorité de la tâche
+XP_BASE = 100
+XP_PAR_PRIORITE = {
+    'urgente': 100,
+    'haute': 50,
+    'moyenne': 25,
+    'faible': 10,
+}
+
+
+def calculer_xp(tache):
+    xp = XP_BASE + XP_PAR_PRIORITE.get(tache.priority, 25)
+    aujourd_hui = date.today()
+    if tache.deadline:
+        if aujourd_hui < tache.deadline:
+            xp += 50   # bonus si terminée avant la deadline
+        elif aujourd_hui == tache.deadline:
+            xp += 25   # bonus si terminée le jour même
+    return xp
 
 
 class TaskViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet CRUD complet pour les tâches étudiantes.
-
-    Endpoints disponibles :
-      GET    /api/tasks/           — Liste toutes les tâches
-      POST   /api/tasks/           — Crée une nouvelle tâche
-      GET    /api/tasks/{id}/      — Détail d'une tâche
-      PUT    /api/tasks/{id}/      — Modifie une tâche (tous les champs)
-      PATCH  /api/tasks/{id}/      — Modifie une tâche (champs partiels)
-      DELETE /api/tasks/{id}/      — Supprime une tâche
-      GET    /api/tasks/stats/     — Statistiques du tableau de bord
-    """
-    queryset = Task.objects.all()
     serializer_class = TaskSerializer
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['status', 'priority', 'subject']
@@ -29,57 +36,72 @@ class TaskViewSet(viewsets.ModelViewSet):
     ordering_fields = ['created_at', 'deadline', 'priority']
     ordering = ['-created_at']
 
+    def get_queryset(self):
+        # Chaque utilisateur voit uniquement ses propres tâches
+        return Task.objects.filter(user=self.request.user)
+
+    def perform_create(self, serializer):
+        # La tâche est liée à l'utilisateur connecté
+        serializer.save(user=self.request.user)
+
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
-        instance = self.get_object()
-        old_status = instance.status
-        new_status = request.data.get('status', old_status)
+        tache = self.get_object()
+        ancien_statut = tache.status
+        nouveau_statut = request.data.get('status', ancien_statut)
 
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer = self.get_serializer(tache, data=request.data, partial=partial)
         serializer.is_valid(raise_exception=True)
 
-        gamification_data = {'xp_earned': 0, 'xp_subtracted': 0, 'new_badges': []}
+        xp_gagne = 0
+        xp_perdu = 0
 
-        if old_status != 'terminée' and new_status == 'terminée':
-            # ── Complétion ──────────────────────────────────────────────────
-            # Si la tâche avait déjà des XP (re-complétion après annulation),
-            # on les retire d'abord pour repartir proprement
-            if instance.xp_awarded > 0:
-                revoke_task_completion(instance, request.user)
+        # La tâche passe à "terminée"
+        if ancien_statut != 'terminée' and nouveau_statut == 'terminée':
+            # Si la tâche avait déjà des XP (re-complétion), on les retire d'abord
+            if tache.xp_awarded > 0 and request.user.is_authenticated:
+                profil, _ = UserProfile.objects.get_or_create(user=request.user)
+                profil.total_xp = max(0, profil.total_xp - tache.xp_awarded)
+                profil.tasks_completed = max(0, profil.tasks_completed - 1)
+                profil.save()
 
             serializer.save(completed_at=date.today(), xp_awarded=0)
 
-            result = award_task_completion(serializer.instance, request.user)
+            if request.user.is_authenticated:
+                profil, _ = UserProfile.objects.get_or_create(user=request.user)
+                xp_gagne = calculer_xp(serializer.instance)
+                profil.total_xp = max(0, profil.total_xp + xp_gagne)
+                profil.tasks_completed += 1
+                profil.save()
 
-            serializer.instance.xp_awarded = result['xp_earned']
-            serializer.instance.save(update_fields=['xp_awarded'])
+                serializer.instance.xp_awarded = xp_gagne
+                serializer.instance.save(update_fields=['xp_awarded'])
 
-            gamification_data['xp_earned'] = result['xp_earned']
-            gamification_data['new_badges'] = result['new_badges']
-
-        elif old_status == 'terminée' and new_status != 'terminée':
-            # ── Annulation de complétion ─────────────────────────────────────
-            result = revoke_task_completion(instance, request.user)
+        # La tâche quitte le statut "terminée"
+        elif ancien_statut == 'terminée' and nouveau_statut != 'terminée':
+            if request.user.is_authenticated and tache.xp_awarded > 0:
+                profil, _ = UserProfile.objects.get_or_create(user=request.user)
+                xp_perdu = tache.xp_awarded
+                profil.total_xp = max(0, profil.total_xp - xp_perdu)
+                profil.tasks_completed = max(0, profil.tasks_completed - 1)
+                profil.save()
             serializer.save(completed_at=None, xp_awarded=0)
-            gamification_data['xp_subtracted'] = result['xp_subtracted']
 
         else:
-            # ── Changement de statut neutre (ex: à faire → en cours) ─────────
             serializer.save()
 
-        response_data = dict(serializer.data)
-        response_data.update(gamification_data)
-        return Response(response_data)
+        donnees = dict(serializer.data)
+        donnees['xp_earned'] = xp_gagne
+        donnees['xp_subtracted'] = xp_perdu
+        return Response(donnees)
 
     @action(detail=False, methods=['get'], url_path='stats')
     def stats(self, request):
-        """Retourne les statistiques pour le tableau de bord."""
-        qs = Task.objects.all()
-        data = {
-            'total': qs.count(),
-            'todo': qs.filter(status='à faire').count(),
-            'doing': qs.filter(status='en cours').count(),
-            'done': qs.filter(status='terminée').count(),
-            'urgent': qs.filter(priority='urgente').exclude(status='terminée').count(),
-        }
-        return Response(data)
+        toutes = Task.objects.filter(user=request.user)
+        return Response({
+            'total': toutes.count(),
+            'todo': toutes.filter(status='à faire').count(),
+            'doing': toutes.filter(status='en cours').count(),
+            'done': toutes.filter(status='terminée').count(),
+            'urgent': toutes.filter(priority='urgente').exclude(status='terminée').count(),
+        })

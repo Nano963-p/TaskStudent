@@ -55,7 +55,7 @@
             <label class="field-lbl">Date limite</label>
             <input class="field-inp" type="date" v-model="form.deadline" :min="today"/>
             <span v-if="form.deadline && form.deadline < today" class="field-warn">
-              ⚠ Date dans le passé — les badges Rapide/Survivant ne se déclencheront pas.
+              ⚠ Date dans le passé — le bonus XP deadline ne s'appliquera pas.
             </span>
           </div>
         </div>

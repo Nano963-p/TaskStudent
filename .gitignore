@@ -1,18 +1,16 @@
-# ── Python / Django ──────────────────────────────────────────────
+# ── Python ────────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
 *.pyo
-*.pyd
-*.sqlite3
-*.db
 
-# Virtual environments
+# Environnement virtuel
 env/
 venv/
 .venv/
-ENV/
 
 # Django
+*.sqlite3
+*.db
 *.log
 local_settings.py
 media/
@@ -21,20 +19,18 @@ staticfiles/
 # ── Node / Vue ────────────────────────────────────────────────────
 node_modules/
 dist/
-.output/
 
-# ── Environment variables ─────────────────────────────────────────
+# ── Variables d'environnement ─────────────────────────────────────
 .env
 .env.local
 .env.*.local
 
-# ── Editors & OS ─────────────────────────────────────────────────
+# ── Éditeurs & OS ─────────────────────────────────────────────────
 .vscode/settings.json
 .idea/
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
 .DS_Store
 Thumbs.db
+*.sw?
+
+# ── Claude Code ───────────────────────────────────────────────────
+.claude/
