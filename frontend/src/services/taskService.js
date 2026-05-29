@@ -1,7 +1,9 @@
 import axios from 'axios'
 
+// En développement : /api (proxy Vite → http://127.0.0.1:8000)
+// En production   : VITE_API_URL défini dans les variables d'environnement Vercel
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_URL || '/api',
   headers: { 'Content-Type': 'application/json' },
 })
 

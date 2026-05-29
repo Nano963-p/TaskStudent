@@ -140,7 +140,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, provide, onMounted } from 'vue'
+import { ref, reactive, computed, provide, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useTaskStore } from './store/taskStore'
 import { useAuthStore } from './store/authStore'
@@ -213,13 +213,19 @@ function logout() {
   router.push('/login')
 }
 
-onMounted(() => {
-  if (auth.isAuthenticated) {
-    store.fetchTasks()
-    store.fetchStats()
-    gamification.fetchProfile()
-  }
-})
+// Se déclenche dès que auth.isAuthenticated passe à true
+// (connexion, ou rechargement de page si déjà connecté)
+watch(
+  () => auth.isAuthenticated,
+  (connecte) => {
+    if (connecte) {
+      store.fetchTasks()
+      store.fetchStats()
+      gamification.fetchProfile()
+    }
+  },
+  { immediate: true }
+)
 </script>
 
 <style scoped>
