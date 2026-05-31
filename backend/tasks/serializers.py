@@ -24,3 +24,8 @@ class TaskSerializer(serializers.ModelSerializer):
         if len(value.strip()) < 3:
             raise serializers.ValidationError("Le titre doit contenir au moins 3 caractères.")
         return value.strip()
+
+    def validate_deadline(self, value):
+        if value and value < timezone.now().date():
+            raise serializers.ValidationError("La date limite ne peut pas être avant aujourd'hui.")
+        return value

@@ -55,17 +55,6 @@
       </nav>
 
       <div class="sidebar-footer">
-        <!-- XP -->
-        <div class="xp-block">
-          <div class="xp-block-row">
-            <div class="xp-level-pill">Niv. {{ gamification.profile.level }}</div>
-            <span class="xp-amount">{{ gamification.profile.total_xp }} XP</span>
-          </div>
-          <div class="xp-track">
-            <div class="xp-fill" :style="{ width: gamification.profile.xp_progress_pct + '%' }"></div>
-          </div>
-        </div>
-
         <!-- Utilisateur -->
         <div class="user-block">
           <div class="user-avatar">{{ userInitial }}</div>
@@ -81,17 +70,15 @@
             </button>
           </div>
         </div>
-
-        <div class="progress-block">
-          <div class="progress-row">
-            <span class="progress-label">Progression globale</span>
-            <span class="progress-pct">{{ tauxCompletion }}%</span>
+        <div class="xp-line">
+          <div class="xp-line-head">
+            <span>Progression XP</span>
+            <span>{{ gamification.profile.total_xp }} / {{ gamification.profile.xp_next_level }}</span>
           </div>
-          <div class="progress-track">
-            <div class="progress-fill" :style="{ width: tauxCompletion + '%' }"></div>
+          <div class="xp-line-track">
+            <div class="xp-line-fill" :style="{ width: gamification.profile.xp_progress_pct + '%' }"></div>
           </div>
         </div>
-        <span class="version">v1.2 · TaskStudent</span>
       </div>
     </aside>
 
@@ -195,12 +182,6 @@ const sousTitrePage = computed(() => {
   if (route.path.startsWith('/tasks'))
     return `${store.stats.total} tâche(s) enregistrée(s)`
   return `${store.stats.urgent} urgente(s)  ·  ${store.stats.todo} à faire`
-})
-
-const tauxCompletion = computed(() => {
-  const total = store.stats.total
-  if (total === 0) return 0
-  return Math.round((store.stats.done / total) * 100)
 })
 
 const userInitial = computed(() => {
@@ -343,42 +324,6 @@ watch(
   gap: 12px;
 }
 
-.xp-block {
-  background: rgba(0,212,176,0.05);
-  border: 1px solid rgba(0,212,176,0.14);
-  border-radius: 10px;
-  padding: 10px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.xp-block-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.xp-level-pill {
-  background: rgba(0,212,176,0.18);
-  color: var(--accent-light);
-  font-size: 10.5px;
-  font-weight: 700;
-  padding: 2px 9px;
-  border-radius: 20px;
-}
-.xp-amount { font-size: 11px; font-weight: 600; color: var(--text2); }
-.xp-track {
-  height: 4px;
-  background: var(--surface3);
-  border-radius: 4px;
-  overflow: hidden;
-}
-.xp-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #00D4B0, #0288C4);
-  border-radius: 4px;
-  transition: width 0.7s ease;
-}
-
 .user-block {
   display: flex;
   align-items: center;
@@ -423,27 +368,29 @@ watch(
 }
 .logout-btn:hover { color: #FCA5A5; }
 
-.progress-block { display: flex; flex-direction: column; gap: 7px; }
-.progress-row {
+.xp-line {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.xp-line-head {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  color: var(--muted);
+  font-size: 11px;
 }
-.progress-label { font-size: 11px; color: var(--muted); }
-.progress-pct { font-size: 11px; font-weight: 700; color: var(--accent-light); }
-.progress-track {
-  height: 4px;
+.xp-line-track {
+  height: 5px;
   background: var(--surface3);
-  border-radius: 4px;
+  border-radius: 999px;
   overflow: hidden;
 }
-.progress-fill {
+.xp-line-fill {
   height: 100%;
   background: var(--grad);
-  border-radius: 4px;
-  transition: width 0.7s ease;
+  border-radius: inherit;
+  transition: width 0.4s ease;
 }
-.version { font-size: 10px; color: var(--muted); text-align: center; }
 
 /* Zone principale */
 .main {

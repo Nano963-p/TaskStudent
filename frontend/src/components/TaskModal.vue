@@ -53,10 +53,17 @@
           </div>
           <div class="field">
             <label class="field-lbl">Date limite</label>
-            <input class="field-inp" type="date" v-model="form.deadline" :min="today"/>
-            <span v-if="form.deadline && form.deadline < today" class="field-warn">
-              ⚠ Date dans le passé — le bonus XP deadline ne s'appliquera pas.
-            </span>
+            <input
+              class="field-inp"
+              type="date"
+              v-model="form.deadline"
+              :min="today"
+              :class="{ 'field-inp--error': errors.deadline }"
+              @input="enforceDeadline"
+              @change="enforceDeadline"
+            />
+            <span class="field-help">Dates avant aujourd'hui interdites.</span>
+            <span v-if="errors.deadline" class="field-err">{{ errors.deadline }}</span>
           </div>
         </div>
 
@@ -106,7 +113,7 @@
       <!-- Footer -->
       <div class="modal-foot">
         <button class="btn-cancel" @click="emit('close')">Annuler</button>
-        <button class="btn-save" :disabled="saving" @click="save">
+        <button class="btn-save" :disabled="saving || hasPastDeadline" @click="save">
           <span v-if="saving" class="btn-spinner"></span>
           {{ saving ? 'Enregistrement...' : (task ? 'Sauvegarder' : 'Créer la tâche') }}
         </button>
@@ -117,10 +124,18 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { useTaskStore } from '../store/taskStore'
 
-const today = new Date().toISOString().split('T')[0]
+function getLocalDate() {
+  const now = new Date()
+  const yyyy = now.getFullYear()
+  const mm = String(now.getMonth() + 1).padStart(2, '0')
+  const dd = String(now.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
+const today = getLocalDate()
 
 const props = defineProps({ task: Object })
 const emit  = defineEmits(['close', 'saved'])
@@ -142,10 +157,14 @@ const STATUSES = [
   { value: 'terminée', label: 'Terminée',  color: '#10B981', glow: 'rgba(16,185,129,0.25)' },
 ]
 
+function isPastDate(value) {
+  return Boolean(value && value < today)
+}
+
 const form = reactive({
   title:       props.task?.title       || '',
   subject:     props.task?.subject     || SUBJECTS[0],
-  deadline:    props.task?.deadline    || '',
+  deadline:    isPastDate(props.task?.deadline) ? '' : (props.task?.deadline || ''),
   priority:    props.task?.priority    || 'moyenne',
   status:      props.task?.status      || 'à faire',
   description: props.task?.description || '',
@@ -153,10 +172,26 @@ const form = reactive({
 
 const errors = reactive({})
 const saving = ref(false)
+const hasPastDeadline = computed(() => isPastDate(form.deadline))
+
+if (isPastDate(props.task?.deadline)) {
+  errors.deadline = "L'ancienne date était passée. Choisissez aujourd'hui ou une date future."
+}
+
+function enforceDeadline() {
+  if (!isPastDate(form.deadline)) {
+    errors.deadline = ''
+    return
+  }
+
+  form.deadline = ''
+  errors.deadline = "Date passée interdite. Choisissez aujourd'hui ou une date future."
+}
 
 function validate() {
   errors.title = form.title.trim().length < 3 ? 'Le titre doit contenir au moins 3 caractères.' : ''
-  return !errors.title
+  errors.deadline = hasPastDeadline.value ? "La date limite ne peut pas être avant aujourd'hui." : ''
+  return !errors.title && !errors.deadline
 }
 
 async function save() {
@@ -177,6 +212,7 @@ async function save() {
   } catch (e) {
     const d = e.response?.data
     if (d?.title) errors.title = Array.isArray(d.title) ? d.title[0] : d.title
+    if (d?.deadline) errors.deadline = Array.isArray(d.deadline) ? d.deadline[0] : d.deadline
   } finally {
     saving.value = false
   }
@@ -280,7 +316,26 @@ async function save() {
 .field-inp--error { border-color: rgba(239,68,68,0.50) !important; }
 .field-inp::placeholder { color: var(--muted); }
 .field-inp option { background: #0C0C1A; color: var(--text); }
+.field-inp[type="date"] {
+  color-scheme: dark;
+  padding-right: 42px;
+}
+.field-inp[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 1;
+  width: 18px;
+  height: 18px;
+  padding: 4px;
+  border-radius: 6px;
+  background-color: rgba(0,212,176,0.18);
+  filter: invert(78%) sepia(78%) saturate(783%) hue-rotate(120deg) brightness(101%) contrast(101%);
+}
+.field-inp[type="date"]::-webkit-calendar-picker-indicator:hover {
+  background-color: rgba(0,212,176,0.34);
+  box-shadow: 0 0 0 3px rgba(0,212,176,0.10);
+}
 .field-ta { resize: vertical; min-height: 84px; line-height: 1.55; }
+.field-help { font-size: 10.5px; color: var(--muted); }
 .field-err  { font-size: 11px; color: var(--danger); }
 .field-warn { font-size: 11px; color: var(--warn); }
 

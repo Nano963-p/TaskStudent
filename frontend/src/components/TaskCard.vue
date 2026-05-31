@@ -117,8 +117,10 @@ async function cycleStatus() {
   const res = await store.patchTask(props.task.id, { status: prochainStatut })
 
   if (res.xp_earned > 0) {
+    gamification.applyXpChange(res.xp_earned, 1)
     showToast(`+${res.xp_earned} XP ✦ Tâche terminée !`, 'success')
   } else if (res.xp_subtracted > 0) {
+    gamification.applyXpChange(-res.xp_subtracted, -1)
     showToast(`-${res.xp_subtracted} XP · Tâche remise en attente`, 'danger')
   } else {
     showToast('Statut mis à jour', 'success')

@@ -1,485 +1,540 @@
 <template>
   <div class="task-list-view">
-
-    <!-- ── FILTER BAR ──────────────────────────── -->
     <div class="filter-bar">
-
-      <!-- Top row: title + search -->
       <div class="filter-head">
-        <div class="filter-title-row">
-          <span class="filter-icon-wrap">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                 stroke-linecap="round" width="13" height="13">
-              <line x1="4" y1="6" x2="20" y2="6"/>
-              <line x1="8" y1="12" x2="16" y2="12"/>
-              <line x1="11" y1="18" x2="13" y2="18"/>
-            </svg>
-          </span>
-          <span class="filter-title">Filtres</span>
-          <span v-if="activeFilterCount" class="filter-badge">{{ activeFilterCount }}</span>
-        </div>
-
-        <div class="search-wrap" :class="{ 'search-focused': searchFocused }">
-          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-               stroke-width="2" stroke-linecap="round" width="13" height="13">
-            <circle cx="11" cy="11" r="8"/>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-          </svg>
-          <input
-            ref="searchInput"
-            class="search-input"
-            v-model="search"
-            placeholder="Rechercher une tâche..."
-            @focus="searchFocused = true"
-            @blur="searchFocused = false"
-          />
-          <kbd v-if="!search && !searchFocused" class="search-hint">/</kbd>
-          <button v-if="search" class="search-clear" @click="search = ''; searchInput.focus()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-                 stroke-linecap="round" width="11" height="11">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
-        </div>
+        <strong>Liste des tâches</strong>
+        <input
+          ref="searchInput"
+          class="search-input"
+          v-model="search"
+          placeholder="Rechercher une tâche..."
+          @focus="searchFocused = true"
+          @blur="searchFocused = false"
+        />
       </div>
 
-      <div class="filter-divider"></div>
-
-      <!-- Status segmented control -->
       <div class="filter-row">
-        <span class="row-label">Statut</span>
-        <div class="seg-control">
-          <button
-            v-for="s in statusOptions"
-            :key="s.value"
-            :class="['seg-btn', { 'seg-btn--active': filterStatus === s.value }]"
-            @click="filterStatus = s.value"
-          >
-            <span class="seg-indicator" :style="`--ic: ${s.color}`"></span>
-            {{ s.label }}
-          </button>
+        <div class="filter-group">
+          <span class="filter-label">Statut</span>
+          <div class="select-wrap">
+            <select class="filter-select" v-model="filterStatus">
+              <option v-for="s in statusOptions" :key="s.value" :value="s.value">{{ s.label }}</option>
+            </select>
+          </div>
         </div>
-      </div>
 
-      <!-- Priority pills -->
-      <div class="filter-row">
-        <span class="row-label">Priorité</span>
-        <div class="prio-row">
-          <button
-            v-for="p in priorityOptions"
-            :key="p.value"
-            :class="['prio-pill', { 'prio-pill--active': filterPriority === p.value }]"
-            :style="filterPriority === p.value ? `--pc:${p.color || 'var(--accent)'};--pg:${p.glow || 'var(--accent-glow)'}` : ''"
-            @click="filterPriority = p.value"
-          >
-            <span class="prio-dot" :style="`background:${p.color || 'var(--muted)'}`"></span>
-            {{ p.label }}
-          </button>
+        <div class="filter-group">
+          <span class="filter-label">Priorité</span>
+          <div class="select-wrap">
+            <select class="filter-select" v-model="filterPriority">
+              <option v-for="p in priorityOptions" :key="p.value" :value="p.value">{{ p.label }}</option>
+            </select>
+          </div>
         </div>
-      </div>
 
+        <button v-if="hasActiveFilters" class="btn-secondary" @click="clearFilters">Effacer</button>
+      </div>
     </div>
 
-    <!-- ── RESULT BAR ──────────────────────────── -->
     <div class="result-bar" v-if="!store.loading">
-      <div class="result-left">
-        <span class="result-num">{{ filteredTasks.length }}</span>
-        <span class="result-text">tâche{{ filteredTasks.length !== 1 ? 's' : '' }} trouvée{{ filteredTasks.length !== 1 ? 's' : '' }}</span>
-      </div>
-      <Transition name="clear-fade">
-        <button v-if="hasActiveFilters" class="clear-btn" @click="clearFilters">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-               stroke-linecap="round" width="10" height="10">
-            <line x1="18" y1="6" x2="6" y2="18"/>
-            <line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
-          Effacer les filtres
-        </button>
-      </Transition>
+      {{ filteredTasks.length }} tâche{{ filteredTasks.length !== 1 ? 's' : '' }} trouvée{{ filteredTasks.length !== 1 ? 's' : '' }}
     </div>
 
-    <!-- ── TASK LIST ──────────────────────────── -->
     <div v-if="store.loading" class="state-loading">
       <div class="spinner"></div>
       <span>Chargement...</span>
     </div>
 
-    <template v-else-if="filteredTasks.length">
-      <TaskCard
-        v-for="task in filteredTasks"
-        :key="task.id"
-        :task="task"
-        @edit="emit('edit', task)"
-        @deleted="onDeleted"
-        @statusChanged="onStatusChanged"
-      />
-    </template>
-
-    <div v-else class="state-empty">
-      <div class="empty-glow"></div>
-      <div class="empty-icon">🔍</div>
-      <p class="empty-title">Aucune tâche trouvée</p>
-      <p class="empty-sub">Modifiez vos filtres ou créez une nouvelle tâche</p>
+    <div v-else-if="store.error" class="state-error">
+      {{ store.error }}
     </div>
 
+    <div v-else-if="filteredTasks.length" class="table-wrap">
+      <table class="task-table">
+        <thead>
+          <tr>
+            <th>Titre</th>
+            <th>Matière</th>
+            <th>Priorité</th>
+            <th>Statut</th>
+            <th>Deadline</th>
+            <th class="actions-col">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="task in filteredTasks" :key="task.id" :class="{ overdue: task.is_overdue }">
+            <td>
+              <span :class="{ done: task.status === 'terminée' }">{{ task.title }}</span>
+            </td>
+            <td>{{ task.subject }}</td>
+            <td>
+              <span :class="['badge', `priority-${task.priority}`]">{{ task.priority }}</span>
+            </td>
+            <td>
+              <span :class="['status-badge', statusClass(task.status)]">{{ statusLabel(task.status) }}</span>
+            </td>
+            <td>{{ task.deadline ? formatDate(task.deadline) : '-' }}</td>
+            <td class="actions">
+              <button
+                v-if="task.status !== 'terminée'"
+                class="btn-finish"
+                @click="finishTask(task)"
+              >
+                Terminer
+              </button>
+              <button class="btn-secondary" @click="emit('edit', task)">Modifier</button>
+              <template v-if="deleteConfirmId === task.id">
+                <span class="confirm-text">Supprimer ?</span>
+                <button class="btn-confirm-yes" @click="deleteTask(task)">Oui</button>
+                <button class="btn-confirm-no" @click="deleteConfirmId = null">Non</button>
+              </template>
+              <button v-else class="btn-danger" @click="deleteConfirmId = task.id">Supprimer</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div v-else class="state-empty">
+      <p class="empty-title">Aucune tâche trouvée</p>
+      <p class="empty-sub">Modifiez les filtres ou créez une nouvelle tâche.</p>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, inject, onMounted, onUnmounted } from 'vue'
 import { useTaskStore } from '../store/taskStore'
-import TaskCard from '../components/TaskCard.vue'
+import { useGamificationStore } from '../store/gamificationStore'
 
-const store      = useTaskStore()
-const showToast  = inject('showToast')
-const emit       = defineEmits(['edit'])
+const store = useTaskStore()
+const gamification = useGamificationStore()
+const showToast = inject('showToast')
+const emit = defineEmits(['edit'])
 
-const filterStatus   = ref('all')
+const filterStatus = ref('all')
 const filterPriority = ref('all')
-const search         = ref('')
-const searchFocused  = ref(false)
-const searchInput    = ref(null)
+const search = ref('')
+const searchFocused = ref(false)
+const searchInput = ref(null)
+const deleteConfirmId = ref(null)
 
 const statusOptions = [
-  { value: 'all',      label: 'Toutes',     color: 'var(--accent)' },
-  { value: 'à faire',  label: 'À faire',    color: 'var(--warn)' },
-  { value: 'en cours', label: 'En cours',   color: 'var(--accent)' },
-  { value: 'terminée', label: 'Terminées',  color: 'var(--success)' },
+  { value: 'all', label: 'Tous', key: 'all' },
+  { value: 'à faire', label: 'À faire', key: 'todo' },
+  { value: 'en cours', label: 'En cours', key: 'doing' },
+  { value: 'terminée', label: 'Terminée', key: 'done' },
 ]
+
 const priorityOptions = [
-  { value: 'all',     label: 'Toutes',   color: 'var(--accent)',   glow: 'var(--accent-glow)' },
-  { value: 'urgente', label: 'Urgente',  color: '#EF4444',         glow: 'rgba(239,68,68,0.30)' },
-  { value: 'haute',   label: 'Haute',    color: '#F59E0B',         glow: 'rgba(245,158,11,0.26)' },
-  { value: 'moyenne', label: 'Moyenne',  color: '#00D4B0',         glow: 'rgba(0,212,176,0.28)' },
-  { value: 'faible',  label: 'Faible',   color: 'var(--muted)',    glow: 'transparent' },
+  { value: 'all', label: 'Toutes', key: 'all' },
+  { value: 'urgente', label: 'Urgente', key: 'urgent' },
+  { value: 'haute', label: 'Haute', key: 'high' },
+  { value: 'moyenne', label: 'Moyenne', key: 'medium' },
+  { value: 'faible', label: 'Faible', key: 'low' },
 ]
 
 const filteredTasks = computed(() =>
-  store.tasks.filter(t => {
-    if (filterStatus.value   !== 'all' && t.status   !== filterStatus.value)   return false
-    if (filterPriority.value !== 'all' && t.priority !== filterPriority.value) return false
-    if (search.value) {
-      const q = search.value.toLowerCase()
-      return t.title.toLowerCase().includes(q) || t.subject.toLowerCase().includes(q)
-    }
-    return true
+  store.tasks.filter(task => {
+    if (filterStatus.value !== 'all' && task.status !== filterStatus.value) return false
+    if (filterPriority.value !== 'all' && task.priority !== filterPriority.value) return false
+    if (!search.value) return true
+
+    const q = search.value.toLowerCase()
+    return (
+      task.title.toLowerCase().includes(q) ||
+      task.subject.toLowerCase().includes(q) ||
+      (task.description || '').toLowerCase().includes(q)
+    )
   })
 )
 
 const hasActiveFilters = computed(() =>
   filterStatus.value !== 'all' || filterPriority.value !== 'all' || search.value !== ''
 )
-const activeFilterCount = computed(() =>
-  (filterStatus.value !== 'all' ? 1 : 0) +
-  (filterPriority.value !== 'all' ? 1 : 0) +
-  (search.value !== '' ? 1 : 0)
-)
 
 function clearFilters() {
-  filterStatus.value   = 'all'
+  filterStatus.value = 'all'
   filterPriority.value = 'all'
-  search.value         = ''
+  search.value = ''
 }
 
-function handleSlash(e) {
-  if (e.key === '/' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
-    e.preventDefault()
+function formatDate(date) {
+  return new Date(`${date}T00:00:00`).toLocaleDateString('fr-FR')
+}
+
+function statusLabel(status) {
+  const labels = {
+    'à faire': 'À faire',
+    'en cours': 'En cours',
+    'terminée': 'Terminée',
+  }
+  return labels[status] || status
+}
+
+function statusClass(status) {
+  if (status === 'terminée') return 'status-badge--done'
+  if (status === 'en cours') return 'status-badge--doing'
+  return 'status-badge--todo'
+}
+
+async function changeStatus(task, status) {
+  try {
+    const res = await store.patchTask(task.id, { status })
+    if (res.xp_earned > 0) {
+      gamification.applyXpChange(res.xp_earned, 1)
+      showToast(`+${res.xp_earned} XP · Tâche terminée`, 'success')
+      await gamification.fetchProfile()
+    } else if (res.xp_subtracted > 0) {
+      gamification.applyXpChange(-res.xp_subtracted, -1)
+      showToast(`-${res.xp_subtracted} XP · Tâche remise en attente`, 'danger')
+      await gamification.fetchProfile()
+    } else {
+      showToast('Statut mis à jour', 'success')
+    }
+  } catch {
+    showToast('Impossible de modifier le statut.', 'danger')
+  }
+}
+
+async function finishTask(task) {
+  await changeStatus(task, 'terminée')
+}
+
+async function deleteTask(task) {
+  try {
+    await store.deleteTask(task.id)
+    deleteConfirmId.value = null
+    showToast('Tâche supprimée', 'danger')
+  } catch {
+    showToast('Impossible de supprimer la tâche.', 'danger')
+  }
+}
+
+function handleSlash(event) {
+  if (event.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) {
+    event.preventDefault()
     searchInput.value?.focus()
   }
 }
 
 onMounted(() => window.addEventListener('keydown', handleSlash))
 onUnmounted(() => window.removeEventListener('keydown', handleSlash))
-
-async function onDeleted() {
-  await store.fetchTasks()
-  await store.fetchStats()
-  showToast('Tâche supprimée', 'danger')
-}
-async function onStatusChanged() {
-  await store.fetchStats()
-}
 </script>
 
 <style scoped>
-.task-list-view { display: flex; flex-direction: column; }
+.task-list-view {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
 
-/* ── Filter bar ──────────────────────────────── */
 .filter-bar {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 14px 18px;
-  margin-bottom: 14px;
+  border-radius: var(--radius-sm);
+  padding: 14px;
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-/* Head row */
+.filter-head,
+.result-bar,
+.state-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .filter-head {
-  display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: 12px;
-}
-.filter-title-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.filter-icon-wrap {
-  width: 26px; height: 26px;
-  background: var(--accent-dim);
-  border: 1px solid rgba(0,212,176,0.18);
-  border-radius: 7px;
-  display: flex; align-items: center; justify-content: center;
-  color: var(--accent);
-  flex-shrink: 0;
-}
-.filter-title {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text2);
-  letter-spacing: 0.3px;
-}
-.filter-badge {
-  background: var(--grad);
-  color: #fff;
-  font-size: 9.5px;
-  font-weight: 800;
-  padding: 1px 6px;
-  border-radius: 20px;
-  line-height: 1.5;
 }
 
-/* Search */
-.search-wrap {
-  position: relative;
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-.search-icon {
-  position: absolute;
-  left: 11px;
-  color: var(--muted);
-  pointer-events: none;
-  transition: color 0.18s;
-}
-.search-focused .search-icon { color: var(--accent); }
-
-.search-input {
-  background: var(--surface2);
-  border: 1px solid var(--border2);
-  border-radius: var(--radius-sm);
-  padding: 7px 32px 7px 32px;
-  color: var(--text);
-  font-size: 12.5px;
-  outline: none;
-  width: 190px;
-  transition: width 0.3s cubic-bezier(0.22,1,0.36,1), border-color 0.18s, box-shadow 0.18s, background 0.18s;
-}
-.search-focused .search-input {
-  width: 250px;
-  border-color: rgba(0,212,176,0.45);
-  background: rgba(0,212,176,0.05);
-  box-shadow: 0 0 0 3px rgba(0,212,176,0.08);
-}
-.search-input::placeholder { color: var(--muted); }
-
-.search-hint {
-  position: absolute;
-  right: 10px;
-  font-size: 10px;
-  color: var(--muted);
-  background: var(--surface3);
-  border: 1px solid var(--border2);
-  border-radius: 4px;
-  padding: 1px 5px;
-  pointer-events: none;
-  font-family: var(--font-b);
-  letter-spacing: 0;
-}
-.search-clear {
-  position: absolute;
-  right: 10px;
-  background: var(--surface3);
-  border: 1px solid var(--border2);
-  border-radius: 4px;
-  width: 18px; height: 18px;
-  display: flex; align-items: center; justify-content: center;
-  color: var(--muted);
-  cursor: pointer;
-  transition: all 0.15s;
-  padding: 0;
-}
-.search-clear:hover { color: var(--text); background: var(--border2); }
-
-/* Divider */
-.filter-divider {
-  height: 1px;
-  background: var(--border);
-  margin: 0 -2px;
-}
-
-/* Filter rows */
 .filter-row {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  align-items: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
 }
-.row-label {
-  font-size: 9.5px;
-  font-weight: 700;
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.filter-label {
   color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
   text-transform: uppercase;
-  letter-spacing: 1.1px;
-  width: 52px;
-  flex-shrink: 0;
 }
 
-/* ── Segmented control ─────────────────────── */
-.seg-control {
-  display: inline-flex;
-  background: rgba(0,0,0,0.22);
-  border: 1px solid var(--border);
-  border-radius: 11px;
-  padding: 3px;
-  gap: 1px;
-}
-.seg-btn {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 6px 16px;
-  border-radius: 9px;
-  font-size: 12.5px;
-  font-weight: 500;
-  border: none;
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.22,1,0.36,1);
-  white-space: nowrap;
+.select-wrap {
   position: relative;
-}
-.seg-btn:hover:not(.seg-btn--active) { color: var(--text2); background: var(--surface2); }
-.seg-btn--active {
-  background: var(--grad);
-  color: #fff;
-  box-shadow: 0 2px 12px var(--accent-glow);
+  min-width: 210px;
 }
 
-.seg-indicator {
-  width: 5px; height: 5px;
-  border-radius: 50%;
-  background: var(--ic, var(--muted));
-  opacity: 0.7;
-  transition: opacity 0.2s;
-  flex-shrink: 0;
+.select-wrap::after {
+  content: '';
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--accent-light);
+  border-bottom: 2px solid var(--accent-light);
+  transform: translateY(-65%) rotate(45deg);
+  pointer-events: none;
 }
-.seg-btn--active .seg-indicator { background: rgba(255,255,255,0.6); opacity: 1; }
 
-/* ── Priority pills ────────────────────────── */
-.prio-row { display: flex; gap: 6px; flex-wrap: wrap; }
-.prio-pill {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 6px 13px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 500;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--muted);
+.search-input,
+.filter-select {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-xs);
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+}
+
+.search-input {
+  width: 260px;
+  padding: 9px 12px;
+}
+
+.filter-select {
+  width: 100%;
+  appearance: none;
+  color-scheme: dark;
+  padding: 10px 42px 10px 13px;
   cursor: pointer;
-  transition: all 0.18s;
+  font-weight: 700;
+}
+
+.filter-select option {
+  background: #111827;
+  color: #E8EEF8;
+  font-weight: 700;
+}
+
+.filter-select option:checked {
+  background: #0F766E;
+  color: #FFFFFF;
+}
+
+.search-input:focus,
+.filter-select:focus {
+  border-color: rgba(0,212,176,0.50);
+  box-shadow: 0 0 0 3px rgba(0,212,176,0.10);
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 700;
   white-space: nowrap;
 }
-.prio-pill:hover:not(.prio-pill--active) {
-  border-color: var(--border2);
-  color: var(--text2);
-  background: var(--surface2);
-}
-.prio-pill--active {
-  background: var(--surface2);
-  border-color: var(--pc);
-  color: var(--pc);
-  box-shadow: 0 0 0 1px var(--pc), 0 0 14px var(--pg);
-}
-.prio-dot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  box-shadow: 0 0 4px currentColor;
-}
-.prio-pill--active .prio-dot { box-shadow: 0 0 8px var(--pc); }
 
-/* ── Result bar ────────────────────────────── */
+.status-badge--todo {
+  background: var(--warn-dim);
+  color: var(--warn);
+}
+
+.status-badge--doing {
+  background: var(--accent-dim);
+  color: var(--accent-light);
+}
+
+.status-badge--done {
+  background: var(--success-dim);
+  color: var(--success);
+}
+
 .result-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-  min-height: 24px;
-}
-.result-left { display: flex; align-items: baseline; gap: 5px; }
-.result-num {
-  font-family: var(--font-h);
-  font-size: 18px;
-  font-weight: 700;
-  background: var(--grad);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  line-height: 1;
-}
-.result-text { font-size: 12px; color: var(--muted); }
-
-.clear-btn {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 11.5px;
-  font-weight: 500;
   color: var(--muted);
-  background: transparent;
+  font-size: 13px;
+}
+
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
   border: 1px solid var(--border);
-  border-radius: 7px;
-  padding: 4px 10px;
-  cursor: pointer;
-  transition: all 0.15s;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
 }
-.clear-btn:hover { color: var(--danger); border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.06); }
 
-.clear-fade-enter-active, .clear-fade-leave-active { transition: opacity 0.18s, transform 0.18s; }
-.clear-fade-enter-from, .clear-fade-leave-to { opacity: 0; transform: translateX(8px); }
-
-/* ── States ────────────────────────────────── */
-.state-loading {
-  display: flex; align-items: center; gap: 10px;
-  padding: 36px 0; color: var(--muted); font-size: 13px;
+.task-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
 }
+
+.task-table th,
+.task-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  font-size: 13px;
+  vertical-align: middle;
+}
+
+.task-table th {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.task-table tr:last-child td {
+  border-bottom: none;
+}
+
+.task-table tbody tr:hover {
+  background: var(--surface2);
+}
+
+.task-table .overdue td {
+  background: rgba(239,68,68,0.05);
+}
+
+.done {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.priority-urgente { color: #FCA5A5; background: var(--danger-dim); }
+.priority-haute { color: var(--warn); background: var(--warn-dim); }
+.priority-moyenne { color: var(--accent-light); background: var(--accent-dim); }
+.priority-faible { color: var(--text2); background: var(--surface3); }
+
+.actions-col {
+  width: 280px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-finish,
+.btn-secondary,
+.btn-danger,
+.btn-confirm-yes,
+.btn-confirm-no {
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-xs);
+  padding: 7px 10px;
+  color: var(--text);
+  background: var(--surface2);
+  font-size: 12px;
+}
+
+.btn-finish {
+  color: var(--accent-light);
+  background: var(--accent-dim);
+  border-color: rgba(0,212,176,0.28);
+}
+
+.btn-finish:hover {
+  background: rgba(0,212,176,0.20);
+}
+
+.btn-secondary:hover {
+  border-color: rgba(0,212,176,0.35);
+  color: var(--accent-light);
+}
+
+.btn-danger {
+  color: #FCA5A5;
+  background: var(--danger-dim);
+  border-color: rgba(239,68,68,0.25);
+}
+
+.btn-danger:hover {
+  background: rgba(239,68,68,0.20);
+}
+
+.confirm-text {
+  align-self: center;
+  color: var(--text2);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.btn-confirm-yes {
+  color: #fff;
+  background: var(--danger);
+  border-color: rgba(239,68,68,0.55);
+}
+
+.btn-confirm-yes:hover {
+  background: #DC2626;
+}
+
+.btn-confirm-no {
+  color: var(--text2);
+  background: var(--surface3);
+}
+
+.btn-confirm-no:hover {
+  color: var(--text);
+  border-color: var(--border3);
+}
+
+.state-loading,
+.state-error,
+.state-empty {
+  padding: 34px 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.state-error {
+  color: #FCA5A5;
+}
+
 .spinner {
-  width: 16px; height: 16px;
+  width: 16px;
+  height: 16px;
   border: 2px solid var(--border2);
   border-top-color: var(--accent);
   border-radius: 50%;
   animation: spin 0.75s linear infinite;
 }
 
-.state-empty { position: relative; text-align: center; padding: 60px 0; }
-.empty-glow {
-  position: absolute; top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  width: 180px; height: 180px;
-  background: radial-gradient(circle, rgba(0,212,176,0.07) 0%, transparent 70%);
-  border-radius: 50%; pointer-events: none;
+.empty-title {
+  color: var(--text2);
+  font-weight: 700;
+  margin-bottom: 6px;
 }
-.empty-icon  { font-size: 44px; margin-bottom: 14px; opacity: 0.6; }
-.empty-title { font-family: var(--font-h); font-size: 15px; font-weight: 700; color: var(--text2); margin-bottom: 6px; }
-.empty-sub   { font-size: 13px; color: var(--muted); }
+
+@media (max-width: 720px) {
+  .filter-head,
+  .filter-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .search-input,
+  .filter-group,
+  .select-wrap {
+    width: 100%;
+  }
+}
 </style>
